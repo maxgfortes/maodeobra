@@ -12,13 +12,18 @@
 .tabbar__logo { display: none; }
 
 @media (min-width: 1024px) {
-  :root { --sidebar-w: 248px; --bleed-w: calc(100vw - var(--sidebar-w)); --content-max: 1080px; --gutter: 24px; }
+  :root { --sidebar-w: 248px; --bleed-w: calc(100vw - var(--sidebar-w)); --content-max: 600px; --gutter: 24px; }
 
   .has-sidebar .navbar { display: none; }
+
+  .page-head {
+    padding-top: 20px;
+  }
   .has-sidebar .app {
-    padding-top: 24px;
+    padding-top: 0;
     padding-bottom: 48px;
     padding-left: var(--sidebar-w);
+    max-width: calc(var(--sidebar-w) + 600px);
   }
   .has-sidebar .toast-host { top: 16px; left: var(--sidebar-w); }
   .has-sidebar .net-bar { top: 16px; left: calc(50% + var(--sidebar-w) / 2); }
@@ -57,20 +62,13 @@
   .has-sidebar .promo p { max-width: 46ch; }
 
   .has-sidebar .profile__banner { height: 280px; }
+
+  .banners {
+    width: auto;
+    margin: 0;
+  }
   .has-sidebar .profile__body {
     display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); gap: 0 8px; align-items: start;
   }
   .has-sidebar .profile__side { position: sticky; top: 12px; }
-  .has-sidebar .gallery { grid-template-columns: repeat(4, 1fr); }
-}
-
-@media (min-width: 1280px) {
-  .has-sidebar .list--icons, .has-sidebar .list--avatars {
-    display: grid; grid-template-columns: 1fr 1fr; column-gap: 1px; background: var(--bg-elevated);
-  }
-  .has-sidebar .list--icons > li:only-child, .has-sidebar .list--avatars > li:only-child { grid-column: 1 / -1; }
-  .has-sidebar .list--icons > li:nth-child(2) > .row::before,
-  .has-sidebar .list--avatars > li:nth-child(2) > .row::before { display: none; }
-  .has-sidebar .profile__side .list--icons { display: block; }
-  .has-sidebar .profile__side .list--icons > li:nth-child(2) > .row::before { display: block; }
 }
