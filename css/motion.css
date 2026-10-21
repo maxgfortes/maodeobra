@@ -1,0 +1,30 @@
+.rise { animation: rise .5s var(--spring) both; animation-delay: calc(var(--i, 0) * 32ms); }
+@keyframes rise { from { opacity: 0; transform: translate3d(0, 14px, 0) scale(.98); } }
+
+.avatar img, .gallery__item img, .profile__banner img, .banner__img, .port-item img, .media-edit img {
+  opacity: 0; transition: opacity .35s var(--ease), transform .3s var(--ease);
+}
+img.is-loaded { opacity: 1 !important; }
+
+.tab.is-active svg { animation: tab-pop .4s var(--spring); }
+@keyframes tab-pop { 40% { transform: scale(.82); } 75% { transform: scale(1.08); } }
+
+.navbar { view-transition-name: navbar; }
+.tabbar { view-transition-name: tabbar; }
+::view-transition-group(navbar), ::view-transition-group(tabbar) { animation: none; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .42s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+html[data-nav="forward"]::view-transition-old(root) { animation-name: vt-out-left; }
+html[data-nav="forward"]::view-transition-new(root) { animation-name: vt-in-right; }
+html[data-nav="back"]::view-transition-old(root) { animation-name: vt-out-right; z-index: 2; }
+html[data-nav="back"]::view-transition-new(root) { animation-name: vt-in-left; }
+html[data-nav="tab"]::view-transition-old(root) { animation: none; }
+html[data-nav="tab"]::view-transition-new(root) { animation: vt-fade-in .22s ease both; }
+@keyframes vt-in-right { from { transform: translateX(100%); } }
+@keyframes vt-out-left { to { transform: translateX(-30%); opacity: .6; } }
+@keyframes vt-in-left { from { transform: translateX(-30%); opacity: .6; } }
+@keyframes vt-out-right { to { transform: translateX(100%); } }
+@keyframes vt-fade-in { from { opacity: 0; transform: scale(.985); } }
+
+.card { transition: transform .18s var(--spring), box-shadow .2s var(--ease); }
+
+.is-standalone .navbar, .is-standalone .tabbar { -webkit-user-select: none; user-select: none; }

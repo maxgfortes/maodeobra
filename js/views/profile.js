@@ -1,0 +1,156 @@
+import { getProfessional, primarySpecialty } from '../services/professionals.js';
+import { getSpec } from '../data/categories.js';
+import { placeLabel } from '../data/states.js';
+
+const DEFAULT_BANNER = 'assets/img/banner-padrao.jpg';
+import { emptyState } from '../ui/components.js';
+import { icon } from '../ui/icons.js';
+import { toast } from '../ui/toast.js';
+import { openLightbox } from '../ui/lightbox.js';
+import { back } from '../core/router.js';
+import { currentUser } from '../services/auth.js';
+import {
+  esc, avatarHTML, whatsappLink, telLink, mailLink, formatPhoneBR, haptic,
+} from '../core/utils.js';
+
+export async function profileView({ id }, { root, isStale }) {
+  root.innerHTML = '<div class="center-spinner" style="padding-top:120px"><div class="spinner"></div></div>';
+
+  const pro = await getProfessional(id);
+  if (isStale()) return;
+  const listed = pro && pro.published && pro.active;
+  const isOwner = pro && !listed && (await currentUser())?.uid === pro.id;
+  if (isStale()) return;
+  if (!pro || (!listed && !isOwner)) {
+    root.innerHTML = emptyState({
+      iconName: 'person',
+      title: 'Perfil indisponível',
+      text: 'Este profissional não está mais listado ou o link está incorreto.',
+      action: '<a class="btn btn--sm" href="#/explore">Explorar profissionais</a>',
+    });
+    return;
+  }
+
+  const firstName = pro.name.split(' ')[0];
+  const wa = whatsappLink(pro.whatsapp, `Olá, ${firstName}! Encontrei seu perfil no Guia Mão de Obra e gostaria de um orçamento.`);
+  const tel = telLink(pro.phone || pro.whatsapp);
+  const mail = mailLink(pro.email, 'Orçamento — Guia Mão de Obra');
+  const portfolio = Array.isArray(pro.portfolio) ? pro.portfolio : [];
+
+  const ownerNotice = isOwner ? `
+    <a class="notice notice--warning" href="${pro.active ? 'signup.html' : 'signup.html#plano'}">
+      ${icon('info')}
+      <span><strong>Só você vê esta página.</strong> ${pro.active ? 'Seu perfil está oculto nas buscas — ative em “Editar perfil”.' : 'Escolha um plano para publicar seu perfil.'}</span>
+      ${icon('chevronRight')}
+    </a>` : '';
+
+  root.innerHTML = `${ownerNotice}
+    <article class="profile">
+      <figure class="profile__banner">
+        <img src="${esc(pro.bannerURL || DEFAULT_BANNER)}" alt="" decoding="async">
+        <div class="profile__toolbar">
+          <button class="glass-btn" data-action="back" aria-label="Voltar">${icon('chevronLeft', { stroke: 2.6 })}</button>
+          <button class="glass-btn" data-action="share" aria-label="Compartilhar">${icon('share')}</button>
+        </div>
+      </figure>
+
+      <header class="profile__head">
+        ${avatarHTML(pro, 'avatar--xl')}
+        <h1 class="profile__name">${esc(pro.name)}</h1>
+        <div class="profile__spec">${esc(primarySpecialty(pro))}</div>
+        <div class="profile__loc">${icon('pin')}${esc(placeLabel(pro))}</div>
+      </header>
+
+      <div class="contact-bar">
+        <a class="contact-btn contact-btn--whatsapp ${wa ? '' : 'is-disabled'}" href="${esc(wa) || '#'}" target="_blank" rel="noopener" data-contact="whatsapp">
+          ${icon('whatsapp')}WhatsApp
+        </a>
+        <a class="contact-btn ${tel ? '' : 'is-disabled'}" href="${esc(tel) || '#'}" data-contact="phone">${icon('phone')}Ligar</a>
+        <a class="contact-btn ${mail ? '' : 'is-disabled'}" href="${esc(mail) || '#'}" data-contact="email">${icon('mail')}E-mail</a>
+      </div>
+
+      <div class="profile__body">
+      <div class="profile__main">
+      ${pro.bio ? `
+        <h2 class="section-title">Sobre</h2>
+        <div class="group"><div class="list">
+          <p class="bio ${pro.bio.length > 240 ? 'is-clamped' : ''}" id="bio">${esc(pro.bio)}</p>
+          ${pro.bio.length > 240 ? '<button class="row row--action" id="bio-more">Ler mais</button>' : ''}
+        </div></div>` : ''}
+
+      <h2 class="section-title">Portfólio ${portfolio.length ? `<span class="muted" style="font-size:15px;font-weight:400">${portfolio.length} fotos</span>` : ''}</h2>
+      ${galleryHTML(portfolio)}
+
+      <h2 class="section-title">Serviços</h2>
+      <div class="chips">
+        ${(pro.specs || []).map(getSpec).filter(Boolean).map(({ spec }) => `
+          <a class="chip" href="#/s/${esc(spec.id)}"><span class="chip__dot"></span>${esc(spec.name)}</a>`).join('')}
+      </div>
+      </div>
+
+      <aside class="profile__side">
+      <h2 class="section-title">Contato</h2>
+      <div class="group">
+        <ul class="list list--icons">
+          ${pro.whatsapp ? infoRow('whatsapp', '#25d366', 'WhatsApp', formatPhoneBR(pro.whatsapp), wa, true) : ''}
+          ${pro.phone && pro.phone !== pro.whatsapp ? infoRow('phone', '#34c759', 'Telefone', formatPhoneBR(pro.phone), tel) : ''}
+          ${pro.email ? infoRow('mail', '#007aff', 'E-mail', pro.email, mail) : ''}
+          ${infoRow('pin', '#ff3b30', 'Atende em', placeLabel(pro), `https://www.google.com/maps/search/${encodeURIComponent(placeLabel(pro))}`, true)}
+        </ul>
+        <p class="group__footer">Combine valores e detalhes diretamente com o profissional.</p>
+      </div>
+      </aside>
+      </div>
+    </article>`;
+
+  root.addEventListener('click', async (e) => {
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if (action === 'back') { haptic(); back('/explore'); return; }
+    if (action === 'share') { haptic(); share(pro); return; }
+
+    const contact = e.target.closest('[data-contact]');
+    if (contact) haptic();
+
+    if (e.target.closest('#bio-more')) {
+      root.querySelector('#bio').classList.remove('is-clamped');
+      e.target.closest('#bio-more').remove();
+    }
+    const item = e.target.closest('[data-photo]');
+    if (item && portfolio.length) openLightbox(portfolio, Number(item.dataset.photo));
+  });
+}
+
+function infoRow(iconName, color, label, value, href, external = false) {
+  return `
+    <li><a class="row" href="${esc(href)}" ${external ? 'target="_blank" rel="noopener"' : ''}>
+      <span class="icon-tile" style="--tile:${color}">${icon(iconName)}</span>
+      <div class="row__body">
+        <div class="row__subtitle" style="margin:0">${esc(label)}</div>
+        <div class="row__title">${esc(value)}</div>
+      </div>
+    </a></li>`;
+}
+
+function galleryHTML(portfolio) {
+  if (portfolio.length) {
+    return `<div class="gallery">${portfolio.map((url, i) => `
+      <button class="gallery__item" data-photo="${i}" aria-label="Abrir foto ${i + 1}">
+        <img src="${esc(url)}" alt="" loading="lazy" decoding="async">
+      </button>`).join('')}</div>`;
+  }
+  return '<p class="muted pad" style="font-size:15px">Nenhuma foto publicada ainda.</p>';
+}
+
+async function share(pro) {
+  const url = `${location.origin}${location.pathname}#/p/${pro.id}`;
+  const data = { title: pro.name, text: `${pro.name} — ${primarySpecialty(pro)} no Guia Mão de Obra`, url };
+  try {
+    if (navigator.share) await navigator.share(data);
+    else {
+      await navigator.clipboard.writeText(url);
+      toast('Link copiado', 'success');
+    }
+  } catch (err) {
+    if (err?.name !== 'AbortError') toast('Não foi possível compartilhar', 'error');
+  }
+}
