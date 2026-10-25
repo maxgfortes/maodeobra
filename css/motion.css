@@ -5,6 +5,7 @@
   opacity: 0; transition: opacity .35s var(--ease), transform .3s var(--ease);
 }
 img.is-loaded { opacity: 1 !important; }
+img.is-broken { visibility: hidden; }
 
 .tab.is-active svg { animation: tab-pop .4s var(--spring); }
 @keyframes tab-pop { 40% { transform: scale(.82); } 75% { transform: scale(1.08); } }

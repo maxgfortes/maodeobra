@@ -1,4 +1,4 @@
-self.SW_VERSION = 'gmo-1a3e3b2267';
+self.SW_VERSION = 'gmo-b11dbe1659';
 self.SW_PRECACHE = [
   "./",
   "./assets/brand/apple-touch-icon.png",
@@ -6,7 +6,7 @@ self.SW_PRECACHE = [
   "./assets/brand/icon-512.png",
   "./assets/brand/icon-maskable-512.png",
   "./assets/brand/icon.svg",
-  "./assets/icons/construcao.png",
+  "./assets/icons/reformas.png",
   "./assets/img/loading.gif",
   "./css/base.css",
   "./css/components.css",
@@ -25,6 +25,7 @@ self.SW_PRECACHE = [
   "./js/data/states.js",
   "./js/entries/app.js",
   "./js/entries/signup.js",
+  "./js/services/analytics.js",
   "./js/services/auth.js",
   "./js/services/banners.js",
   "./js/services/firebase.js",
@@ -33,6 +34,7 @@ self.SW_PRECACHE = [
   "./js/services/professionals.js",
   "./js/ui/actionsheet.js",
   "./js/ui/carousel.js",
+  "./js/ui/charts.js",
   "./js/ui/components.js",
   "./js/ui/icons.js",
   "./js/ui/lightbox.js",

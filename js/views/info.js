@@ -55,7 +55,7 @@ export function termsView() {
           período contratado e não é renovado automaticamente.</p>
         <h3>5. Privacidade</h3>
         <p>Tratamos os dados conforme a LGPD (Lei 13.709/2018). Dados de perfil são públicos por escolha do
-          profissional; dados de login e pagamento não são exibidos. Você pode pedir a exclusão da sua conta
+          profissional; dados de login e pagamento não são exibidos. Também registramos estatísticas de uso anônimas (telas abertas, buscas e toques em contato), sem nome nem e-mail de quem visita, para melhorar o serviço. Você pode pedir a exclusão da sua conta
           pelo nosso contato.</p>
         <h3>6. Alterações</h3>
         <p>Estes termos podem ser atualizados. O uso contínuo do serviço após uma alteração significa concordância

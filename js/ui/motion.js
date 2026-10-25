@@ -58,7 +58,7 @@ export function animateIn(scope) {
 export function initImageFades() {
   const mark = (img) => img.classList.add('is-loaded');
   document.addEventListener('load', (e) => { if (e.target.tagName === 'IMG') mark(e.target); }, true);
-  document.addEventListener('error', (e) => { if (e.target.tagName === 'IMG') mark(e.target); }, true);
+  document.addEventListener('error', (e) => { if (e.target.tagName === 'IMG') { e.target.classList.add('is-broken'); mark(e.target); } }, true);
   new MutationObserver((records) => {
     for (const r of records) {
       r.addedNodes.forEach((n) => {

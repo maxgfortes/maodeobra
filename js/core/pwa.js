@@ -1,4 +1,5 @@
 import { toast } from '../ui/toast.js';
+import { track } from '../services/analytics.js';
 
 let deferredPrompt = null;
 const listeners = new Set();
@@ -23,6 +24,7 @@ export async function promptInstall() {
   if (deferredPrompt) {
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') track('install');
     deferredPrompt = null;
     listeners.forEach((cb) => cb());
     return outcome;

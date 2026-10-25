@@ -1,6 +1,7 @@
 import { getProfessional, primarySpecialty } from '../services/professionals.js';
 import { getSpec } from '../data/categories.js';
 import { placeLabel } from '../data/states.js';
+import { track } from '../services/analytics.js';
 
 const DEFAULT_BANNER = 'assets/img/banner-padrao.jpg';
 import { emptyState } from '../ui/components.js';
@@ -31,6 +32,7 @@ export async function profileView({ id }, { root, isStale }) {
     return;
   }
 
+  if (listed) track('profile', { p: pro.id });
   const firstName = pro.name.split(' ')[0];
   const wa = whatsappLink(pro.whatsapp, `Olá, ${firstName}! Encontrei seu perfil no Guia Mão de Obra e gostaria de um orçamento.`);
   const tel = telLink(pro.phone || pro.whatsapp);
@@ -106,10 +108,13 @@ export async function profileView({ id }, { root, isStale }) {
   root.addEventListener('click', async (e) => {
     const action = e.target.closest('[data-action]')?.dataset.action;
     if (action === 'back') { haptic(); back('/explore'); return; }
-    if (action === 'share') { haptic(); share(pro); return; }
+    if (action === 'share') { haptic(); track('share', { p: pro.id }); share(pro); return; }
 
     const contact = e.target.closest('[data-contact]');
-    if (contact) haptic();
+    if (contact && !contact.classList.contains('is-disabled')) {
+      haptic();
+      if (listed) track({ whatsapp: 'whatsapp', phone: 'call', email: 'email' }[contact.dataset.contact], { p: pro.id });
+    }
 
     if (e.target.closest('#bio-more')) {
       root.querySelector('#bio').classList.remove('is-clamped');

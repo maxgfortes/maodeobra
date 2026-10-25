@@ -54,7 +54,7 @@ export function homeView(_params, { root, isStale }) {
 
     <h2 class="section-title">Novos no Guia</h2>
     <div class="carousel" id="recent">
-      ${peekRecent(300) ? recentHTML(peekRecent(300)) : '<div class="card pro-mini"><div class="avatar avatar--md skeleton"></div><div class="skeleton sk-line" style="width:80%"></div><div class="skeleton sk-line sk-line--w60"></div></div>'.repeat(3)}
+      ${peekRecent(12) ? recentHTML(peekRecent(12)) : '<div class="card pro-mini"><div class="avatar avatar--md skeleton"></div><div class="skeleton sk-line" style="width:80%"></div><div class="skeleton sk-line sk-line--w60"></div></div>'.repeat(3)}
     </div>
 
     <section class="promo">
@@ -76,7 +76,7 @@ export function homeView(_params, { root, isStale }) {
     stopCarousel = bannerCarousel(root.querySelector('#banners'), banners);
   });
 
-  if (!peekRecent(300)) listRecent(300)
+  if (!peekRecent(12)) listRecent(12)
     .then((all) => {
       if (isStale()) return;
       const el = root.querySelector('#recent');

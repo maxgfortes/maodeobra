@@ -64,8 +64,10 @@ async function networkFirst(request) {
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(RUNTIME);
   const cached = await caches.match(request, { ignoreSearch: true });
+  const key = new URL(request.url);
+  key.search = '';
   const network = fetch(request)
-    .then((res) => { if (res.ok) cache.put(request, res.clone()); return res; })
+    .then((res) => { if (res.ok) cache.put(key.href, res.clone()); return res; })
     .catch(() => cached || Response.error());
   return cached || network;
 }

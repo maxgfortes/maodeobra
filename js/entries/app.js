@@ -4,6 +4,7 @@ import { toast } from '../ui/toast.js';
 import { haptic, scroller } from '../core/utils.js';
 import { initPWA } from '../core/pwa.js';
 import { initNetworkStatus } from '../core/network.js';
+import { track } from '../services/analytics.js';
 import { animateIn, swapView, initImageFades } from '../ui/motion.js';
 
 import { homeView } from '../views/home.js';
@@ -82,6 +83,7 @@ startRouter(async ({ found, path, transition, isStale }) => {
     if (isStale()) return;
     if (typeof result === 'string') view.innerHTML = result;
     else if (typeof result === 'function') cleanup = result;
+    track('view', { path: found.pattern, s: found.params.specId, c: found.params.catId });
   } catch (err) {
     console.error(err);
     if (isStale()) return;
@@ -106,6 +108,7 @@ document.addEventListener('click', (e) => {
   }
   const action = e.target.closest('[data-href]');
   if (action) {
+    if (action.dataset.pro) track('whatsapp', { p: action.dataset.pro });
     e.preventDefault();
     e.stopPropagation();
     haptic();

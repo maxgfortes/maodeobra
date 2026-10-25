@@ -1,5 +1,6 @@
 import { allSpecs, CATEGORIES } from '../data/categories.js';
 import { searchProfessionals } from '../services/professionals.js';
+import { track } from '../services/analytics.js';
 import { pageHead, proRow, navRow, iconTile, emptyState } from '../ui/components.js';
 import { icon } from '../ui/icons.js';
 import { esc, normalize, debounce } from '../core/utils.js';
@@ -41,6 +42,13 @@ export function searchView(_params, { root, isStale }) {
       </ul></div>`;
   }
 
+  let lastTracked = '';
+  const trackSearch = debounce((q, n) => {
+    if (q === lastTracked || isStale()) return;
+    lastTracked = q;
+    track('search', { q, n });
+  }, 1500);
+
   async function run(term) {
     const q = normalize(term);
     clear.hidden = !term;
@@ -64,6 +72,7 @@ export function searchView(_params, { root, isStale }) {
     try {
       const pros = await searchProfessionals(term);
       if (mySeq !== seq || isStale()) return;
+      trackSearch(q, specs.length + pros.length);
       const prosHTML = pros.length
         ? `<p class="group__header mt-16">Profissionais</p><div class="group"><ul class="list list--avatars">${pros.slice(0, 30).map((p) => proRow(p)).join('')}</ul></div>`
         : '';

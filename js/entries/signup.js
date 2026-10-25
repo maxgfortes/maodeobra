@@ -11,6 +11,7 @@ import { demoNote, iconTile } from '../ui/components.js';
 import { renderPlans } from '../views/plans.js';
 import { initPWA } from '../core/pwa.js';
 import { initNetworkStatus } from '../core/network.js';
+import { track } from '../services/analytics.js';
 import {
   esc, normalize, digits, maskPhoneBR, formatPhoneBR, isEmail, avatarHTML, haptic, debounce, scroller,
 } from '../core/utils.js';
@@ -39,6 +40,7 @@ const wantsPlans = () => location.hash === '#plano';
 let stopPlans = null;
 
 function showPlans() {
+  track('plan_view');
   stopPlans?.();
   scroller().scrollTo(0, 0);
   stopPlans = renderPlans(root, {
@@ -132,6 +134,7 @@ function renderAuth({ demo = false } = {}) {
 }
 
 function renderForm() {
+  if (!state.existing) track('signup_start');
   const p = state.existing || {};
   const u = state.user;
   const isEdit = Boolean(state.existing);
@@ -502,6 +505,7 @@ async function save(form) {
       .filter((u) => u && u.includes('firebasestorage') && !keep.has(u));
     Promise.all(old.map(deleteByUrl));
 
+    if (!prev.name) track('signup_save');
     state.existing = { ...prev, ...doc, createdAt: prev.createdAt || fs.Timestamp.now() };
     state.dirty = false;
     invalidateCache();

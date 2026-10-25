@@ -48,7 +48,7 @@ export function proRow(pro, specId) {
           <div class="meta">${icon('pin')}<span>${esc(placeLabel(pro))}</span></div>
         </div>
         <div class="pro-row__actions">
-          ${wa ? `<span class="round-btn round-btn--whatsapp" role="button" aria-label="WhatsApp de ${esc(pro.name)}" data-href="${esc(wa)}">${icon('whatsapp')}</span>` : ''}
+          ${wa ? `<span class="round-btn round-btn--whatsapp" role="button" aria-label="WhatsApp de ${esc(pro.name)}" data-href="${esc(wa)}" data-pro="${esc(pro.id)}">${icon('whatsapp')}</span>` : ''}
           ${chevron}
         </div>
       </a>
