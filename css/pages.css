@@ -271,3 +271,19 @@
 .ad-preview__img { width: 100%; height: 100%; object-fit: cover; }
 .banner-form .ad-preview { max-width: 220px; margin: 0 auto; }
 .banner-admin--ads { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+
+.pay-methods { position: static; margin: 4px 0 16px; }
+.pix-card { padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+.pix-card__lead { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+.pix-card__label { margin: 4px 0 -4px; font-size: 13px; color: var(--label-2); }
+.pix-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 15px; color: var(--label-2); }
+.pix-steps strong { color: var(--label); }
+.pix-qr { width: min(240px, 70%); aspect-ratio: 1; margin: 0 auto; border-radius: 12px; background: #fff; padding: 8px; image-rendering: pixelated; opacity: 1; }
+.pix-code {
+  padding: 10px 12px; border-radius: 10px; background: var(--bg-fill);
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--label);
+  word-break: break-all; max-height: 84px; overflow-y: auto; user-select: all; -webkit-user-select: all;
+}
+.pix-wait { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; color: var(--label-2); }
+.pix-wait .spinner { width: 20px; height: 20px; }
+.pix-wait strong { color: var(--label); font-variant-numeric: tabular-nums; }

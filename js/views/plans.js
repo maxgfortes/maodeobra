@@ -1,5 +1,5 @@
 import { PLANS, getPlan, brl, perMonth } from '../data/plans.js';
-import { mountCardBrick, payPlan, isPaymentsConfigured } from '../services/payments.js';
+import { mountCardBrick, payPlan, payPix, isPaymentsConfigured } from '../services/payments.js';
 import { getFirebase } from '../services/firebase.js';
 import { invalidateCache } from '../services/professionals.js';
 import { icon } from '../ui/icons.js';
@@ -21,9 +21,11 @@ export function renderPlans(root, ctx) {
   let selected = 'semestral';
   let brick = null;
   let unwatch = null;
+  const startPaymentId = ctx.profile?.subscription?.lastPaymentId;
   const summary = subscriptionSummary(ctx.profile);
 
   const cleanup = () => {
+    stopPix();
     brick?.unmount();
     brick = null;
     unwatch?.();
@@ -60,7 +62,7 @@ export function renderPlans(root, ctx) {
               ['image', '#ff9500', 'Portfólio com até 12 fotos'],
             ].map(([ic, c, t]) => `<li><div class="row"><span class="icon-tile" style="--tile:${c}">${icon(ic)}</span><div class="row__body"><div class="row__title">${t}</div></div></div></li>`).join('')}
           </ul>
-          <p class="group__footer">Pagamento seguro processado pelo Mercado Pago. Seus dados de cartão não passam pelos nossos servidores.</p>
+          <p class="group__footer">Pague com Pix (aprovação na hora) ou cartão em até 12x. Processado pelo Mercado Pago; seus dados de cartão não passam pelos nossos servidores.</p>
         </div>
 
         <div class="group center"><button type="button" class="text-btn" data-edit>Editar meu perfil</button></div>
@@ -97,8 +99,33 @@ export function renderPlans(root, ctx) {
     });
   }
 
-  async function stepCard() {
+  let pixTimer = 0;
+
+  function stopPix() {
+    clearInterval(pixTimer);
+    pixTimer = 0;
+  }
+
+  function watchActivation() {
+    if (unwatch) return;
+    getFirebase().then((fb) => {
+      unwatch = fb.fs.onSnapshot(fb.fs.doc(fb.db, 'professionals', ctx.user.uid), (snap) => {
+        if (snap.get('active') === true && snap.get('subscription.lastPaymentId') !== startPaymentId) {
+          const expAt = snap.get('subscription.expiresAt')?.toDate();
+          invalidateCache();
+          haptic(20);
+          stepResult('approved', { expiresAt: expAt?.toISOString() });
+          toast('Pagamento aprovado!', 'success');
+        }
+      });
+    });
+  }
+
+  async function stepCard(method = 'pix') {
     const plan = getPlan(selected);
+    stopPix();
+    brick?.unmount();
+    brick = null;
     root.innerHTML = `
       <section class="view">
         <header class="page-head">
@@ -110,15 +137,118 @@ export function renderPlans(root, ctx) {
             <li><div class="row"><div class="row__body"><div class="row__title">Plano ${esc(plan.name)}</div><div class="row__subtitle">${plan.months === 1 ? '1 mês' : `${plan.months} meses`} de perfil visível</div></div><span class="row__detail" style="color:var(--label);font-weight:600">${brl(plan.price)}</span></div></li>
           </ul>
         </div>
-        <div class="brick-wrap">
-          <div id="card-brick"></div>
-          <div class="center-spinner" id="brick-loading"><div class="spinner"></div></div>
+        <div class="pad">
+          <nav class="segmented pay-methods" role="tablist">
+            <button role="tab" class="segmented__item ${method === 'pix' ? 'is-active' : ''}" data-method="pix" aria-selected="${method === 'pix'}">Pix</button>
+            <button role="tab" class="segmented__item ${method === 'card' ? 'is-active' : ''}" data-method="card" aria-selected="${method === 'card'}">Cartão</button>
+          </nav>
         </div>
+        <div id="pay-pane"></div>
         <p class="secure-note">${icon('checkCircle')} Pagamento protegido pelo Mercado Pago</p>
       </section>`;
 
-    root.querySelector('[data-back-plans]').addEventListener('click', stepPlans);
+    root.querySelector('[data-back-plans]').addEventListener('click', () => { stopPix(); stepPlans(); });
+    root.querySelector('.pay-methods').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-method]');
+      if (!b || b.dataset.method === method) return;
+      haptic();
+      stepCard(b.dataset.method);
+    });
+    if (method === 'pix') pixPane(plan);
+    else cardPane(plan);
+  }
 
+  function pixPane(plan) {
+    const pane = root.querySelector('#pay-pane');
+    pane.innerHTML = `
+      <div class="group">
+        <div class="card pix-card">
+          <p class="pix-card__lead">Aprovação na hora, direto pelo app do seu banco.</p>
+          <ol class="pix-steps">
+            <li>Toque em <strong>Gerar Pix</strong></li>
+            <li>Copie o código ou leia o QR Code no app do banco</li>
+            <li>Pague. Seu perfil entra no ar sozinho</li>
+          </ol>
+          <button type="button" class="btn btn--block" id="gen-pix">Gerar Pix · ${brl(plan.price)}</button>
+        </div>
+      </div>`;
+    pane.querySelector('#gen-pix').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span><span>Gerando Pix…</span>';
+      try {
+        const res = await payPix(plan.id);
+        showPix(plan, res);
+      } catch (err) {
+        console.error(err);
+        toast(err.message || 'Não foi possível gerar o Pix.', 'error', 5000);
+        btn.disabled = false;
+        btn.textContent = `Gerar Pix · ${brl(plan.price)}`;
+      }
+    });
+  }
+
+  function showPix(plan, res) {
+    const pane = root.querySelector('#pay-pane');
+    if (!pane) return;
+    const ends = new Date(res.expiresAt).getTime();
+    pane.innerHTML = `
+      <div class="group">
+        <div class="card pix-card">
+          ${res.qrBase64 ? `<img class="pix-qr" src="data:image/png;base64,${esc(res.qrBase64)}" alt="QR Code Pix de ${esc(brl(plan.price))}">` : ''}
+          <p class="pix-card__label">Pix copia e cola</p>
+          <div class="pix-code" id="pix-code">${esc(res.qrCode)}</div>
+          <button type="button" class="btn btn--block" id="copy-pix">Copiar código Pix</button>
+          <div class="pix-wait"><div class="spinner"></div><span>Aguardando pagamento · expira em <strong id="pix-left">30:00</strong></span></div>
+        </div>
+        <p class="group__footer">No app do banco, escolha <strong>Pix → Pix copia e cola</strong> e cole o código. Esta tela atualiza sozinha quando o pagamento for aprovado.</p>
+      </div>`;
+
+    pane.querySelector('#copy-pix').addEventListener('click', async (e) => {
+      haptic();
+      try {
+        await navigator.clipboard.writeText(res.qrCode);
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(pane.querySelector('#pix-code'));
+        const sel = getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        document.execCommand('copy');
+      }
+      e.currentTarget.textContent = 'Código copiado';
+      toast('Código Pix copiado. Cole no app do seu banco.', 'success', 3500);
+    });
+
+    const left = pane.querySelector('#pix-left');
+    const tick = () => {
+      const ms = ends - Date.now();
+      if (ms <= 0) {
+        stopPix();
+        pane.innerHTML = `
+          <div class="group"><div class="card pix-card">
+            <p class="pix-card__lead">Este Pix expirou sem pagamento.</p>
+            <button type="button" class="btn btn--block" id="again">Gerar novo Pix</button>
+          </div></div>`;
+        pane.querySelector('#again').addEventListener('click', () => pixPane(plan));
+        return;
+      }
+      const m = Math.floor(ms / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      left.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    };
+    tick();
+    pixTimer = setInterval(tick, 1000);
+    watchActivation();
+  }
+
+  async function cardPane(plan) {
+    const pane = root.querySelector('#pay-pane');
+    pane.innerHTML = `
+      <div class="brick-wrap">
+        <div id="card-brick"></div>
+        <div class="center-spinner" id="brick-loading"><div class="spinner"></div></div>
+      </div>`;
     try {
       brick = await mountCardBrick('card-brick', {
         amount: plan.price,
@@ -131,7 +261,7 @@ export function renderPlans(root, ctx) {
       console.error(err);
       root.querySelector('#brick-loading')?.remove();
       root.querySelector('#card-brick').innerHTML = '<div class="empty"><p>Não foi possível carregar o formulário de pagamento. Verifique sua conexão.</p><button class="btn btn--sm mt-16" data-retry>Tentar de novo</button></div>';
-      root.querySelector('[data-retry]').addEventListener('click', stepCard);
+      root.querySelector('[data-retry]').addEventListener('click', () => cardPane(plan));
     }
   }
 
@@ -192,7 +322,7 @@ export function renderPlans(root, ctx) {
 
     const fb = await getFirebase();
     unwatch = fb.fs.onSnapshot(fb.fs.doc(fb.db, 'professionals', uid), (snap) => {
-      if (snap.get('active') === true) {
+      if (snap.get('active') === true && snap.get('subscription.lastPaymentId') !== startPaymentId) {
         const expAt = snap.get('subscription.expiresAt')?.toDate();
         stepResult('approved', { expiresAt: expAt?.toISOString() });
         toast('Pagamento aprovado!', 'success');

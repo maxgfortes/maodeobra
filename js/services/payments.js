@@ -62,3 +62,7 @@ export function payPlan(planId, formData) {
     payer: formData.payer,
   });
 }
+
+export function payPix(planId) {
+  return callFunction('createPixPayment', { planId });
+}

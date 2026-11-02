@@ -1,4 +1,4 @@
-self.SW_VERSION = 'gmo-1189bfe299';
+self.SW_VERSION = 'gmo-055621d3a3';
 self.SW_PRECACHE = [
   "./",
   "./assets/brand/apple-touch-icon.png",
