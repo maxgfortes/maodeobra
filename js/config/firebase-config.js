@@ -11,7 +11,7 @@ export const firebaseConfig = {
 export const appConfig = {
   sdkVersion: '10.12.2',
   functionsRegion: 'southamerica-east1',
-  mercadoPagoPublicKey: 'YOUR_MP_PUBLIC_KEY',
+  mercadoPagoPublicKey: 'APP_USR-f863a901-17c4-4a63-b9a8-611ec94b05b9',
   contact: { email: '', whatsapp: '' },
 };
 

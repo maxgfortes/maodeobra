@@ -1,4 +1,4 @@
-self.SW_VERSION = 'gmo-b11dbe1659';
+self.SW_VERSION = 'gmo-cc5ef454df';
 self.SW_PRECACHE = [
   "./",
   "./assets/brand/apple-touch-icon.png",
@@ -6,6 +6,9 @@ self.SW_PRECACHE = [
   "./assets/brand/icon-512.png",
   "./assets/brand/icon-maskable-512.png",
   "./assets/brand/icon.svg",
+  "./assets/icons/iconDownload.png",
+  "./assets/icons/iconMail.png",
+  "./assets/icons/iconTerms.png",
   "./assets/icons/reformas.png",
   "./assets/img/loading.gif",
   "./css/base.css",
