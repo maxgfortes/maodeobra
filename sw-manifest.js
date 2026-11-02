@@ -1,4 +1,4 @@
-self.SW_VERSION = 'gmo-cc5ef454df';
+self.SW_VERSION = 'gmo-1189bfe299';
 self.SW_PRECACHE = [
   "./",
   "./assets/brand/apple-touch-icon.png",
@@ -36,6 +36,7 @@ self.SW_PRECACHE = [
   "./js/services/payments.js",
   "./js/services/professionals.js",
   "./js/ui/actionsheet.js",
+  "./js/ui/ad-rail.js",
   "./js/ui/carousel.js",
   "./js/ui/charts.js",
   "./js/ui/components.js",

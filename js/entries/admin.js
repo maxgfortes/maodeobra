@@ -23,6 +23,7 @@ const TABS = [
   ['pros', 'Profissionais'],
   ['payments', 'Pagamentos'],
   ['banners', 'Banners'],
+  ['ads', 'Anúncios'],
   ['admins', 'Admins'],
 ];
 let fb = null;
@@ -114,7 +115,7 @@ function showTab() {
   body.classList.remove('fade-swap');
   void body.offsetWidth;
   body.classList.add('fade-swap');
-  const views = { overview, pros, payments, banners, admins };
+  const views = { overview, pros, payments, banners, ads, admins };
   views[tab](body).catch((err) => {
     console.error(err);
     body.innerHTML = `<div class="empty"><h2 class="empty__title">Erro ao carregar</h2><p>${esc(err.message)}</p></div>`;
@@ -151,7 +152,7 @@ async function overview(body) {
   const pros = fs.collection(db, 'professionals');
   const pays = fs.collection(db, 'payments');
 
-  const [evSnap, proSnap, total, active, fresh, periodPay, allPay] = await Promise.all([
+  const [evSnap, proSnap, total, active, fresh, periodPay, allPay, adSnap] = await Promise.all([
     fs.getDocs(fs.query(fs.collection(db, 'events'), fs.where('at', '>=', ts(prevStart)), fs.orderBy('at', 'asc'), fs.limit(30000))),
     fs.getDocs(fs.query(pros, fs.orderBy('updatedAt', 'desc'), fs.limit(500))),
     fs.getCountFromServer(pros),
@@ -159,6 +160,7 @@ async function overview(body) {
     fs.getCountFromServer(fs.query(pros, fs.where('createdAt', '>=', ts(start)))),
     fs.getAggregateFromServer(fs.query(pays, fs.where('status', '==', 'approved'), fs.where('approvedAt', '>=', ts(start))), { sum: fs.sum('amount'), count: fs.count() }),
     fs.getAggregateFromServer(fs.query(pays, fs.where('status', '==', 'approved')), { sum: fs.sum('amount'), count: fs.count() }),
+    fs.getDocs(fs.collection(db, 'ads')),
   ]);
 
   const names = new Map(proSnap.docs.map((d) => [d.id, d.get('name') || 'Sem nome']));
@@ -227,6 +229,8 @@ async function overview(body) {
     { label: 'Viram os planos', v: sPlan, display: `${sPlan} · ${pct(sPlan, sStart)}` },
   ];
 
+  const adNames = new Map(adSnap.docs.map((d, i) => [d.id, `Anúncio ${i + 1}${d.get('link') ? ` · ${d.get('link')}` : ''}`]));
+  const adRows = topBy(of(ev, 'ad'), (e) => e.p).map(([id, v]) => ({ label: adNames.get(id) || 'Anúncio removido', v }));
   const t = total.data().count;
   const a = active.data().count;
   const card = (title, content, sub = '') => `<section class="card dash-card"><h3 class="dash-card__title">${esc(title)}</h3>${sub ? `<p class="dash-card__sub">${esc(sub)}</p>` : ''}${content}</section>`;
@@ -259,6 +263,7 @@ async function overview(body) {
       ${card('Dispositivos', barList(deviceRows), 'Visitantes por tipo de aparelho')}
       ${card('De onde vieram', barList(refRows), 'Sessões por site de origem')}
       ${card('Funil de cadastro', barList(signupRows), 'Profissionais que começaram a se cadastrar')}
+      ${card('Anúncios mais clicados', barList(adRows, { empty: 'Nenhum clique em anúncio no período.' }), 'Cliques nos anúncios da lateral (computador)')}
     </div>
     <p class="group__footer mt-16">Os eventos são anônimos (sem nome nem e-mail de quem visita). Admins logados não são contados.</p>`;
 
@@ -423,66 +428,90 @@ async function payments(body) {
   animateIn(body);
 }
 
-async function banners(body) {
+const MEDIA = {
+  banners: {
+    collection: 'banners',
+    one: 'banner',
+    title: 'Banner',
+    preview: 'banner banner--preview',
+    imgClass: 'banner__img',
+    hint: 'Imagem larga (ex.: 1600×640), ocupa a tela de ponta a ponta na Início.',
+    empty: 'Nenhum banner. Sem banners, a Início não mostra o carrossel.',
+  },
+  ads: {
+    collection: 'ads',
+    one: 'anúncio',
+    title: 'Anúncio',
+    preview: 'ad-preview',
+    imgClass: 'ad-preview__img',
+    hint: 'Imagem vertical (ex.: 600×900). Aparece na lateral direita do site, só no computador.',
+    empty: 'Nenhum anúncio. Sem anúncios, a lateral direita fica vazia.',
+  },
+};
+
+const banners = (body) => mediaTab(body, MEDIA.banners);
+const ads = (body) => mediaTab(body, MEDIA.ads);
+
+async function mediaTab(body, cfg) {
   const { db, fs } = fb;
-  const snap = await fs.getDocs(fs.collection(db, 'banners'));
+  const snap = await fs.getDocs(fs.collection(db, cfg.collection));
   const rows = snap.docs.map((d) => ({ id: d.id, link: d.data().link || '', img: d.data().img || '' }));
 
   body.innerHTML = `
-    <div class="admin-actions"><p class="group__header" style="margin:0">${rows.length} banner(s) · banners/{id} → { link, img }</p>
-      <button class="btn btn--sm" id="add">${icon('plus')}Novo banner</button></div>
-    <div class="banner-admin">
+    <div class="admin-actions"><p class="group__header" style="margin:0">${rows.length} ${cfg.one}(s) · ${cfg.collection}/{id} → { link, img }</p>
+      <button class="btn btn--sm" id="add">${icon('plus')}Novo ${cfg.one}</button></div>
+    <div class="banner-admin banner-admin--${cfg.collection}">
       ${rows.map((b) => `
         <div class="banner-admin__item card">
-          <div class="banner banner--preview">${b.img ? `<img class="banner__img" src="${esc(b.img)}" alt="">` : ''}</div>
+          <div class="${cfg.preview}">${b.img ? `<img class="${cfg.imgClass}" src="${esc(b.img)}" alt="">` : ''}</div>
           <div class="banner-admin__bar">
             <span class="pill pill--neutral">${esc(b.link || 'Sem link')}</span>
             <span class="spacer"></span>
             <button class="round-btn" data-edit="${b.id}" aria-label="Editar">${icon('edit')}</button>
             <button class="round-btn round-btn--danger" data-del="${b.id}" aria-label="Excluir">${icon('trash')}</button>
           </div>
-        </div>`).join('') || '<div class="empty"><p>Nenhum banner. Sem banners, a home não mostra o carrossel.</p></div>'}
+        </div>`).join('') || `<div class="empty"><p>${esc(cfg.empty)}</p></div>`}
     </div>`;
 
-  body.querySelector('#add').addEventListener('click', () => editBanner(null));
+  body.querySelector('#add').addEventListener('click', () => editMedia(cfg, null));
   body.querySelector('.banner-admin').addEventListener('click', async (e) => {
     const t = e.target.closest('button');
     if (!t) return;
-    if (t.dataset.edit) editBanner(rows.find((r) => r.id === t.dataset.edit));
+    if (t.dataset.edit) editMedia(cfg, rows.find((r) => r.id === t.dataset.edit));
     if (t.dataset.del) {
       const b = rows.find((r) => r.id === t.dataset.del);
-      if (!(await confirmSheet({ title: 'Excluir banner?', message: b.link, confirmLabel: 'Excluir', destructive: true }))) return;
-      await fs.deleteDoc(fs.doc(db, 'banners', b.id));
+      if (!(await confirmSheet({ title: `Excluir ${cfg.one}?`, message: b.link, confirmLabel: 'Excluir', destructive: true }))) return;
+      await fs.deleteDoc(fs.doc(db, cfg.collection, b.id));
       if (b.img) deleteByUrl(b.img);
-      toast('Banner excluído', 'success');
+      toast(`${cfg.title} excluído`, 'success');
       showTab();
     }
   });
   animateIn(body);
 }
 
-function editBanner(b) {
+function editMedia(cfg, b) {
   const { db, fs } = fb;
   let file = null;
   const sheet = openSheet({
-    title: b ? 'Editar banner' : 'Novo banner',
+    title: b ? `Editar ${cfg.one}` : `Novo ${cfg.one}`,
     rightLabel: 'Salvar',
     onRight: () => { save(); return false; },
   });
   sheet.body.innerHTML = `
     <form id="bf" class="banner-form" novalidate>
-      <div class="banner banner--preview" id="bprev"></div>
-      <p class="group__header mt-16">Banner</p>
+      <div class="${cfg.preview}" id="bprev"></div>
+      <p class="group__header mt-16">${cfg.title}</p>
       <div class="group"><div class="list">
         <label class="field"><span class="field__label">Imagem</span><input name="image" type="file" accept="image/*"></label>
         <label class="field"><span class="field__label">Link</span><input name="link" maxlength="500" value="${esc(b?.link || '')}" placeholder="#/s/eletricista ou https://…"></label>
-      </div><p class="group__footer">Imagem larga (ex.: 1600×640), ocupa a tela de ponta a ponta. Links internos começam com #/ (ex.: #/c/reformas). Externos com https://.</p></div>
+      </div><p class="group__footer">${esc(cfg.hint)} Links internos começam com #/ (ex.: #/c/reformas). Externos com https://.</p></div>
     </form>`;
 
   const form = sheet.body.querySelector('#bf');
   const prev = sheet.body.querySelector('#bprev');
   let imgURL = b?.img || '';
-  const paint = () => { prev.innerHTML = imgURL ? `<img class="banner__img is-loaded" src="${esc(imgURL)}" alt="">` : ''; };
+  const paint = () => { prev.innerHTML = imgURL ? `<img class="${cfg.imgClass} is-loaded" src="${esc(imgURL)}" alt="">` : ''; };
   form.elements.image.addEventListener('change', (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -501,20 +530,20 @@ function editBanner(b) {
     const btn = sheet.el.querySelector('[data-right]');
     btn.disabled = true;
     try {
-      const ref = b ? fs.doc(db, 'banners', b.id) : fs.doc(fs.collection(db, 'banners'));
+      const ref = b ? fs.doc(db, cfg.collection, b.id) : fs.doc(fs.collection(db, cfg.collection));
       let img = b?.img || '';
       if (file) {
         const blob = await compressImage(file, IMAGE_PRESETS.banner);
-        img = await uploadImage(`banners/${ref.id}-${Date.now()}.jpg`, blob);
+        img = await uploadImage(`banners/${cfg.collection}-${ref.id}-${Date.now()}.jpg`, blob);
         if (b?.img) deleteByUrl(b.img);
       }
       await fs.setDoc(ref, { link, img });
-      toast('Banner salvo', 'success');
+      toast(`${cfg.title} salvo`, 'success');
       sheet.close();
       showTab();
     } catch (err) {
       console.error(err);
-      toast('Não foi possível salvar o banner', 'error');
+      toast(`Não foi possível salvar o ${cfg.one}`, 'error');
       btn.disabled = false;
     }
   }

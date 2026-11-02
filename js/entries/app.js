@@ -5,6 +5,7 @@ import { haptic, scroller } from '../core/utils.js';
 import { initPWA } from '../core/pwa.js';
 import { initNetworkStatus } from '../core/network.js';
 import { track } from '../services/analytics.js';
+import { mountAdRail } from '../ui/ad-rail.js';
 import { animateIn, swapView, initImageFades } from '../ui/motion.js';
 
 import { homeView } from '../views/home.js';
@@ -65,6 +66,8 @@ tabbar.addEventListener('click', (e) => {
     scroller().scrollTo({ top: 0, behavior: 'smooth' });
   }
 });
+
+mountAdRail(document.getElementById('ad-rail'));
 
 const root = document.getElementById('app');
 let cleanup = null;
